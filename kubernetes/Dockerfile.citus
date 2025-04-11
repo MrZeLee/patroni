@@ -45,8 +45,11 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/* /root/.cache
 
-ADD entrypoint.sh /
-ENV PGSSLMODE=verify-ca PGSSLKEY=/etc/ssl/private/ssl-cert-snakeoil.key PGSSLCERT=/etc/ssl/certs/ssl-cert-snakeoil.pem PGSSLROOTCERT=/etc/ssl/certs/ssl-cert-snakeoil.pem
+ADD entrypoint.citus.sh /entrypoint.sh
+ENV PGSSLMODE=verify-ca \
+    PGSSLKEY=/home/postgres/ssl/server.key \
+    PGSSLCERT=/home/postgres/ssl/server.crt \
+    PGSSLROOTCERT=/ca/ca.crt
 
 RUN sed -i 's/^postgresql:/&\n  basebackup:\n    checkpoint: fast/' /entrypoint.sh \
     && sed -i "s|^    postgresql:|&\n      parameters:\n        max_connections: 100\n        shared_buffers: 16MB\n        ssl: 'on'\n        ssl_ca_file: $PGSSLROOTCERT\n        ssl_cert_file: $PGSSLCERT\n        ssl_key_file: $PGSSLKEY\n        citus.node_conninfo: 'sslrootcert=$PGSSLROOTCERT sslkey=$PGSSLKEY sslcert=$PGSSLCERT sslmode=$PGSSLMODE'|"  /entrypoint.sh \
